@@ -1,0 +1,454 @@
+import React, { useState, useMemo } from 'react';
+import { Calendar, Clock, AlertCircle, CheckCircle, Info } from 'lucide-react';
+
+const TimelineCalculator = () => {
+  const [permitPath, setPermitPath] = useState('');
+  
+  const permitTypes = {
+    'discretionary-exemption': {
+      name: 'Discretionary Permit - Categorical Exemption',
+      steps: [
+        { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+        { name: 'Environmental Review', days: 0, note: 'CEQA Exempt', isHard: true, code: 'Public Resources Code §21000 et seq.' },
+        { name: 'Public Review/Challenge Period', days: 35, note: 'If NOE filed - serves as both notice and appeal period', isHard: true, code: 'Public Resources Code §21152' }
+      ],
+      totalRange: '65 days minimum',
+      notes: 'Shortest CEQA path. All timelines are statutory requirements.'
+    },
+    'discretionary-nd': {
+      name: 'Discretionary Permit - Negative Declaration/MND',
+      steps: [
+        { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+        { name: 'Initial Study & Draft MND/ND Preparation', days: 45, note: 'ESTIMATED: Typically 30-60 days depending on project complexity, applicant responsiveness, and submission quality. No statutory deadline for this phase.', isHard: false, range: '30-60 days', code: 'Public Resources Code §21000 et seq.' },
+        { name: 'Public Review Period', days: 32.5, note: 'Minimum 20 days required, typically 30-45 days', isHard: true, range: '20-45 days', code: 'Public Resources Code §21091(a)' },
+        { name: 'MND/ND Adoption & Final Decision', days: 60, note: 'From ND/MND adoption to final project approval', isHard: true, code: 'Gov. Code §65950(a)(2)' }
+      ],
+      totalRange: '142-205 days (5-7 months)',
+      notes: 'Most common CEQA path. Draft MND/ND preparation time is estimated; actual time varies by project complexity.'
+    },
+    'discretionary-eir': {
+      name: 'Discretionary Permit - Environmental Impact Report',
+      steps: [
+        { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+        { name: 'Initial Study/Determination', days: 37.5, note: 'ESTIMATED: Typically 30-45 days', isHard: false, range: '30-45 days', code: 'Public Resources Code §21080.5' },
+        { name: 'NOP/Scoping Meeting', days: 30, note: 'Notice of Preparation and public scoping period', isHard: true, code: 'Public Resources Code §21080.4' },
+        { name: 'Draft EIR Preparation', days: 455, note: 'ESTIMATED: Typically 12-18 months depending on project complexity, applicant responsiveness, and submission quality. No statutory deadline for this phase.', isHard: false, range: '365-540 days (12-18 months)', code: 'Public Resources Code §21000 et seq.' },
+        { name: 'Draft EIR Public/Agency Comment Period', days: 45, note: 'Minimum 45 days required by law', isHard: true, code: 'Public Resources Code §21091' },
+        { name: 'Response to Comments/Final EIR Preparation', days: 60, note: 'ESTIMATED: Typically 30-90 days assuming no major comments requiring recirculation', isHard: false, range: '30-90 days', code: 'Public Resources Code §21000 et seq.' },
+        { name: 'Final EIR Certification & Project Approval', days: 180, note: 'From EIR certification to final project approval', isHard: true, code: 'Gov. Code §65950(a)(1)' }
+      ],
+      totalRange: '837-972 days (23-27 months)',
+      notes: 'Most complex CEQA path. Draft EIR preparation and response to comments periods are estimated; actual times vary by project complexity.'
+    },
+    'discretionary-eir-affordable': {
+      name: 'Affordable Housing (EIR)',
+      steps: [
+        { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+        { name: 'Initial Study/Determination', days: 37.5, note: 'ESTIMATED: Typically 30-45 days', isHard: false, range: '30-45 days', code: 'Public Resources Code §21080.5' },
+        { name: 'NOP/Scoping Meeting', days: 30, note: 'Notice of Preparation and public scoping period', isHard: true, code: 'Public Resources Code §21080.4' },
+        { name: 'Draft EIR Preparation', days: 455, note: 'ESTIMATED: Typically 12-18 months depending on project complexity, applicant responsiveness, and submission quality. No statutory deadline for this phase.', isHard: false, range: '365-540 days (12-18 months)', code: 'Public Resources Code §21000 et seq.' },
+        { name: 'Draft EIR Public/Agency Comment Period', days: 45, note: 'Minimum 45 days required by law', isHard: true, code: 'Public Resources Code §21091' },
+        { name: 'Response to Comments/Final EIR Preparation', days: 60, note: 'ESTIMATED: Typically 30-90 days assuming no major comments requiring recirculation', isHard: false, range: '30-90 days', code: 'Public Resources Code §21000 et seq.' },
+        { name: 'Final EIR Certification & Project Approval', days: 90, note: 'Expedited timeline for affordable housing - from EIR certification to final project approval', isHard: true, code: 'Gov. Code §65950(c)' }
+      ],
+      totalRange: '747-882 days (20-24 months)',
+      notes: 'Expedited timeline for affordable projects. Draft EIR preparation and response to comments periods are estimated; actual times vary by project complexity.'
+    },
+    'ministerial-small': {
+      name: 'Building Permits (≤25 units)',
+      steps: [
+        { name: 'Application Completeness', days: 15, note: '15 business days', isHard: true, code: 'Gov. Code §65913.3(b)' },
+        { name: 'Environmental Review', days: 0, note: 'No CEQA required', isHard: true },
+        { name: 'Building Permit Review', days: 30, note: '30 business days for review', isHard: true, code: 'Gov. Code §65913.3(c)(1) (AB 2234)' }
+      ],
+      totalRange: '45 business days',
+      notes: 'Post-entitlement phase permits per AB 2234. Applies to projects at least 2/3 residential. All timelines are statutory requirements.'
+    },
+    'ministerial-large': {
+      name: 'Building Permits (26+ units)',
+      steps: [
+        { name: 'Application Completeness', days: 15, note: '15 business days', isHard: true, code: 'Gov. Code §65913.3(b)' },
+        { name: 'Environmental Review', days: 0, note: 'No CEQA required', isHard: true },
+        { name: 'Building Permit Review', days: 60, note: '60 business days for review', isHard: true, code: 'Gov. Code §65913.3(c)(2) (AB 2234)' }
+      ],
+      totalRange: '75 business days',
+      notes: 'Post-entitlement phase permits per AB 2234. Applies to projects at least 2/3 residential. All timelines are statutory requirements.'
+    },
+    'sb9-two-unit': {
+      name: 'SB 9 Two-Unit Development',
+      steps: [
+        { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+        { name: 'Environmental Review', days: 0, note: 'CEQA Exempt', isHard: true, code: 'Gov. Code §65852.21' },
+        { name: 'Approval/Denial', days: 60, note: 'From completed application. Application deemed approved if not acted upon.', isHard: true, code: 'Gov. Code §65852.21(h)(1)' }
+      ],
+      totalRange: '90 days',
+      notes: 'Ministerial approval required. All timelines are statutory requirements.'
+    },
+    'sb9-lot-split': {
+      name: 'SB 9 Urban Lot Split',
+      steps: [
+        { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+        { name: 'Environmental Review', days: 0, note: 'CEQA Exempt', isHard: true, code: 'Gov. Code §66411.7' },
+        { name: 'Approval/Denial', days: 60, note: 'From completed application. Application deemed approved if not acted upon.', isHard: true, code: 'Gov. Code §65852.21(h)(1)' }
+      ],
+      totalRange: '90 days',
+      notes: 'Plus time for final map recording. All timelines are statutory requirements.'
+    },
+    'sb9-adu-jadu': {
+      name: 'SB 9 ADU/JADU Permits',
+      steps: [
+        { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+        { name: 'Environmental Review', days: 0, note: 'CEQA Exempt', isHard: true, code: 'Gov. Code §65852.21' },
+        { name: 'Approval/Denial', days: 60, note: 'From completed application', isHard: true, code: 'Gov. Code §65852.21(h)(1)' }
+      ],
+      totalRange: '90 days',
+      notes: 'Ministerial approval required. Application deemed approved if not acted upon within 60 days. All timelines are statutory requirements.'
+    },
+    'sb423-small': {
+      name: 'SB 423 Streamlined (≤150 units)',
+      steps: [
+        { name: 'Notice of Intent & Pre-Application', days: 0, note: 'Tribal consultation and informational hearing (if required) - applicant timeline, no clock started', isHard: true, code: 'Gov. Code §65913.4(b) & (q)' },
+        { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+        { name: 'Eligibility Determination', days: 60, note: 'Agency determines if project meets objective standards', isHard: true, code: 'Gov. Code §65913.4(b)(1)' },
+        { name: 'Design Review & Approval', days: 90, note: 'From application submittal (includes eligibility determination period)', isHard: true, code: 'Gov. Code §65913.4(c)(1)(A)' }
+      ],
+      totalRange: '180 days total',
+      notes: 'For jurisdictions missing RHNA goals. Pre-application requirements must be completed before application submittal. All timelines are statutory requirements.'
+    },
+    'sb423-large': {
+      name: 'SB 423 Streamlined (>150 units)',
+      steps: [
+        { name: 'Notice of Intent & Pre-Application', days: 0, note: 'Tribal consultation and informational hearing (if required) - applicant timeline, no clock started', isHard: true, code: 'Gov. Code §65913.4(b) & (q)' },
+        { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+        { name: 'Eligibility Determination', days: 90, note: 'Agency determines if project meets objective standards', isHard: true, code: 'Gov. Code §65913.4(b)(1)' },
+        { name: 'Design Review & Approval', days: 180, note: 'From application submittal (includes eligibility determination period)', isHard: true, code: 'Gov. Code §65913.4(c)(1)(B)' }
+      ],
+      totalRange: '300 days total',
+      notes: 'For jurisdictions missing RHNA goals. Pre-application requirements must be completed before application submittal. All timelines are statutory requirements.'
+    },
+    'ab2011-affordable': {
+      name: 'AB 2011 - 100% Affordable Projects',
+      steps: [
+        { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+        { name: 'Environmental Review', days: 0, note: 'CEQA Exempt', isHard: true, code: 'Gov. Code §65913.5' },
+        { name: 'Public Review Period', days: 0, note: 'N/A', isHard: true },
+        { name: 'Final Decision', days: 135, note: '90-180 days depending on project size', isHard: true, range: '90-180 days', code: 'Gov. Code §65913.5' }
+      ],
+      totalRange: '120-210 days',
+      notes: 'Ministerial approval on commercial sites. All timelines are statutory requirements.'
+    },
+    'ab2011-mixed': {
+      name: 'AB 2011 - Mixed-Income Projects',
+      steps: [
+        { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+        { name: 'Environmental Review', days: 0, note: 'CEQA Exempt', isHard: true, code: 'Gov. Code §65913.5' },
+        { name: 'Public Review Period', days: 0, note: 'N/A', isHard: true },
+        { name: 'Final Decision', days: 135, note: '90-180 days depending on project size', isHard: true, range: '90-180 days', code: 'Gov. Code §65913.5' }
+      ],
+      totalRange: '120-210 days',
+      notes: '15% affordable, prevailing wage required. All timelines are statutory requirements.'
+    },
+    'sb4': {
+      name: 'SB 4 Faith/University Land',
+      steps: [
+        { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+        { name: 'Environmental Review', days: 0, note: 'CEQA Exempt', isHard: true, code: 'Gov. Code §65913.6' },
+        { name: 'Public Review Period', days: 0, note: 'N/A', isHard: true },
+        { name: 'Final Decision', days: 135, note: '90-180 days depending on project size', isHard: true, range: '90-180 days', code: 'Gov. Code §65913.6' }
+      ],
+      totalRange: '120-210 days',
+      notes: '100% affordable, by-right approval. All timelines are statutory requirements.'
+    },
+    'ab1332': {
+      name: 'AB 1332 Pre-Approved ADU Plans',
+      steps: [
+        { name: 'Application Completeness', days: 0, note: 'Instant with pre-approved plans', isHard: true, code: 'Gov. Code §65852.2' },
+        { name: 'Environmental Review', days: 0, note: 'No CEQA', isHard: true },
+        { name: 'Public Review Period', days: 0, note: 'N/A', isHard: true },
+        { name: 'Final Decision', days: 30, isHard: true, code: 'Gov. Code §65852.2' }
+      ],
+      totalRange: '30 days',
+      notes: 'Fastest pathway - pre-approved designs. All timelines are statutory requirements.'
+    },
+    'sb684': {
+      name: 'SB 684 Multifamily Lots (2024)',
+      steps: [
+        { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+        { name: 'Environmental Review', days: 0, note: 'CEQA Exempt', isHard: true, code: 'Gov. Code §66411.7' },
+        { name: 'Public Review Period', days: 0, note: 'N/A', isHard: true },
+        { name: 'Final Decision', days: 60, note: 'Or deemed approved', isHard: true, code: 'Gov. Code §66411.7' }
+      ],
+      totalRange: '90 days',
+      notes: 'Up to 10 units on multifamily lots ≤5 acres. All timelines are statutory requirements.'
+    },
+    'sb1123': {
+      name: 'SB 1123 Single-Family Lots (2025)',
+      steps: [
+        { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+        { name: 'Environmental Review', days: 0, note: 'CEQA Exempt', isHard: true, code: 'Gov. Code §66411.7' },
+        { name: 'Public Review Period', days: 0, note: 'N/A', isHard: true },
+        { name: 'Final Decision', days: 60, note: 'Or deemed approved', isHard: true, code: 'Gov. Code §66411.7' }
+      ],
+      totalRange: '90 days',
+      notes: 'Up to 10 units on vacant SF lots ≤1.5 acres. All timelines are statutory requirements.'
+    },
+    'ab130': {
+      name: 'AB 130 Infill Housing Exemption',
+      steps: [
+        { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+        { name: 'Environmental Review', days: 0, note: 'CEQA Exempt', isHard: true, code: 'Public Resources Code §21080.50' },
+        { name: 'Tribal Consultation', days: 97.5, note: '60-135 days required', isHard: true, range: '60-135 days', code: 'Public Resources Code §21080.50' },
+        { name: 'Final Decision', days: 30, note: 'From tribal consultation end', isHard: true, code: 'Gov. Code §65950' }
+      ],
+      totalRange: '120-195 days',
+      notes: 'Revolutionary streamlining for infill. All timelines are statutory requirements.'
+    },
+    'sb131': {
+      name: 'SB 131 "Near Miss" Projects',
+      steps: [
+        { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+        { name: 'Limited Environmental Review', days: 30, note: 'Limited to single disqualifying condition', isHard: true, code: 'Public Resources Code §21080.55' },
+        { name: 'Public Review Period', days: 30, note: 'Per applicable review type', isHard: true },
+        { name: 'Final Decision', days: 60, isHard: true, code: 'Gov. Code §65950' }
+      ],
+      totalRange: 'Varies by condition',
+      notes: 'Streamlined for projects missing 1 criteria. Timelines follow standard PSA requirements.'
+    }
+  };
+
+  const timeline = useMemo(() => {
+    if (!permitPath) return null;
+    return permitTypes[permitPath];
+  }, [permitPath]);
+
+  const totalDays = useMemo(() => {
+    if (!timeline) return 0;
+    return timeline.steps.reduce((sum, step) => sum + step.days, 0);
+  }, [timeline]);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="max-w-5xl mx-auto">
+        <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-8 text-white">
+            <h1 className="text-3xl font-bold mb-2">California Permit Streamlining Act</h1>
+            <p className="text-blue-100">Timeline Calculator & Project Planner</p>
+          </div>
+
+          <div className="p-8">
+            <div className="mb-8">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                Select Permit Type or Housing Pathway
+              </label>
+              <select
+                value={permitPath}
+                onChange={(e) => setPermitPath(e.target.value)}
+                className="w-full p-4 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
+              >
+                <option value="">-- Choose a permit pathway --</option>
+                <optgroup label="Discretionary Permits with CEQA">
+                  <option value="discretionary-exemption">Categorical Exemption</option>
+                  <option value="discretionary-nd">Negative Declaration/MND</option>
+                  <option value="discretionary-eir">Environmental Impact Report</option>
+                  <option value="discretionary-eir-affordable">Affordable Housing (EIR)</option>
+                </optgroup>
+                <optgroup label="AB 2234 Building Permits">
+                  <option value="ministerial-small">Building Permits (≤25 units)</option>
+                  <option value="ministerial-large">Building Permits (26+ units)</option>
+                </optgroup>
+                <optgroup label="SB 9">
+                  <option value="sb9-two-unit">SB 9 Two-Unit Development</option>
+                  <option value="sb9-lot-split">SB 9 Urban Lot Split</option>
+                  <option value="sb9-adu-jadu">SB 9 ADU/JADU Permits</option>
+                </optgroup>
+                <optgroup label="SB 423/35 Streamlined Approval">
+                  <option value="sb423-small">SB 423 (≤150 units)</option>
+                  <option value="sb423-large">SB 423 (>150 units)</option>
+                </optgroup>
+                <optgroup label="AB 2011 Commercial Land Housing">
+                  <option value="ab2011-affordable">100% Affordable Projects</option>
+                  <option value="ab2011-mixed">Mixed-Income Projects</option>
+                </optgroup>
+                <optgroup label="SB 4 Faith/University Land">
+                  <option value="sb4">Affordable Housing Projects</option>
+                </optgroup>
+                <optgroup label="AB 1332 Pre-Approved ADUs">
+                  <option value="ab1332">Using Pre-Approved Plans</option>
+                </optgroup>
+                <optgroup label="SB 684/SB 1123 Small Lot Subdivisions">
+                  <option value="sb684">SB 684 Multifamily Lots</option>
+                  <option value="sb1123">SB 1123 Single-Family Lots</option>
+                </optgroup>
+                <optgroup label="AB 130/SB 131 New Pathways (2025)">
+                  <option value="ab130">AB 130 Infill Housing Exemption</option>
+                  <option value="sb131">SB 131 "Near Miss" Projects</option>
+                </optgroup>
+              </select>
+            </div>
+
+            {timeline && (
+              <div className="space-y-6">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <Clock className="w-8 h-8 text-green-600" />
+                      <div>
+                        <h2 className="text-2xl font-bold text-gray-800">
+                          Anticipated Timeline
+                        </h2>
+                        <p className="text-sm text-gray-600">{timeline.name}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-4xl font-bold text-green-600">
+                        {timeline.totalRange}
+                      </div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        Total Duration
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {timeline.notes && (
+                    <div className="flex items-start gap-2 mt-4 bg-white rounded-lg p-4">
+                      <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-gray-700">{timeline.notes}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <Calendar className="w-6 h-6 text-blue-600" />
+                    Process Timeline Breakdown
+                  </h3>
+
+                  <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-gray-700">
+                        <p className="font-semibold mb-2">Timeline Legend:</p>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-block w-3 h-3 bg-blue-600 rounded-full"></span>
+                            <span><strong>Statutory Deadline</strong> - Required by law with Government Code citation</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="inline-block w-3 h-3 bg-amber-500 rounded-full"></span>
+                            <span><strong>Estimated Timeline</strong> - No statutory deadline; typical duration based on project complexity</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {timeline.steps.map((step, index) => (
+                      <div key={index} className="relative">
+                        <div className="flex items-start gap-4">
+                          <div className={`flex-shrink-0 w-12 h-12 ${step.isHard ? 'bg-blue-600' : 'bg-amber-500'} text-white rounded-full flex items-center justify-center font-bold`}>
+                            {index + 1}
+                          </div>
+                          <div className={`flex-1 bg-white rounded-lg p-4 shadow-sm border-2 ${step.isHard ? 'border-blue-200' : 'border-amber-200'}`}>
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-semibold text-gray-800 text-lg">
+                                    {step.name}
+                                  </h4>
+                                  {!step.isHard && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded">
+                                      <Info className="w-3 h-3" />
+                                      ESTIMATED
+                                    </span>
+                                  )}
+                                </div>
+                                {step.code && (
+                                  <a 
+                                    href={`https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=${step.code.includes('Public Resources Code') ? 'PRC' : 'GOV'}&sectionNum=${step.code.match(/\d+(\.\d+)?/)?.[0] || ''}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-mono"
+                                  >
+                                    {step.code} ↗
+                                  </a>
+                                )}
+                              </div>
+                              <span className={`text-2xl font-bold ml-4 ${step.isHard ? 'text-blue-600' : 'text-amber-600'}`}>
+                                {step.days > 0 ? (step.range || `${step.days} days`) : 'N/A'}
+                              </span>
+                            </div>
+                            {step.note && (
+                              <p className={`text-sm mt-2 ${step.isHard ? 'text-gray-600' : 'text-amber-900 font-medium bg-amber-50 p-2 rounded'}`}>
+                                {step.note}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {index < timeline.steps.length - 1 && (
+                          <div className="ml-6 h-6 w-0.5 bg-gray-300 my-2" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-8 pt-6 border-t-2 border-gray-300">
+                    <div className="flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-lg p-6">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle className="w-8 h-8" />
+                        <span className="text-xl font-semibold">
+                          {timeline.totalRange.includes('months') || timeline.totalRange.includes('days') ? 'Total Estimated Timeline' : 'Estimated Timeline'}
+                        </span>
+                      </div>
+                      <div className="text-3xl font-bold">
+                        {timeline.totalRange}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6">
+                  <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-yellow-600" />
+                    Important Reminders
+                  </h4>
+                  <ul className="space-y-2 text-sm text-gray-700">
+                    <li>• Timelines begin from application completeness determination (Gov. Code §65943)</li>
+                    <li>• Agencies must determine completeness within 30 days</li>
+                    <li>• <strong>Statutory deadlines</strong> (shown in blue) are required by law and cannot be exceeded without mutual agreement or specific findings</li>
+                    <li>• <strong>Estimated timelines</strong> (shown in amber) have no statutory limit and vary based on project complexity, applicant responsiveness, and submission quality</li>
+                    <li>• Time limits can be extended by mutual agreement or for specific public health/safety findings</li>
+                    <li>• Timelines pause when referred to outside agencies</li>
+                    <li>• Local jurisdictions may have additional requirements that do not conflict with state minimums</li>
+                    <li>• As of 2025, applications can be "deemed approved" if agencies miss PSA deadlines (AB 130/SB 131)</li>
+                    <li>• Brown Act notice requirements (typically 14 days) vary by agency and may be incorporated into public review periods</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {!timeline && (
+              <div className="text-center py-16">
+                <Calendar className="w-20 h-20 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 text-lg">
+                  Select a permit pathway above to see the anticipated timeline
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-gray-100 px-8 py-6 text-sm text-gray-600 border-t">
+            <p>
+              This tool reflects California state requirements as of September 2025, including all major 
+              streamlined housing pathways. <strong>Statutory deadlines</strong> are required by law with Government Code citations. 
+              <strong> Estimated timelines</strong> represent typical durations where no statutory deadline exists and may vary based 
+              on project complexity, applicant responsiveness, submission quality, and agency resources.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TimelineCalculator;
