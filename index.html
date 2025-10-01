@@ -108,6 +108,56 @@
                     totalRange: '747-882 days (20-24 months)',
                     notes: 'Expedited timeline for affordable projects. Draft EIR preparation and response to comments periods are estimated; actual times vary by project complexity.'
                 },
+                'tentative-map-minor': {
+  name: 'Minor Subdivision (Tentative Map)',
+  steps: [
+    { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+    { name: 'Environmental Review', days: 45, note: 'Varies by CEQA pathway - typically Categorical Exemption or Negative Declaration', isHard: false, range: '0-90 days', code: 'Public Resources Code §21000 et seq.' },
+    { name: 'Tentative Map Review & Approval', days: 50, note: 'Agency must approve, conditionally approve, or deny', isHard: true, code: 'Gov. Code §66452.1' },
+    { name: 'Final Map Preparation', days: 180, note: 'ESTIMATED: Applicant prepares final map meeting conditions. Typically 4-12 months.', isHard: false, range: '120-365 days' },
+    { name: 'Final Map Review & Recording', days: 50, note: 'Agency review and county recorder processing', isHard: true, code: 'Gov. Code §66458' }
+  ],
+  totalRange: '355-625 days (12-21 months)',
+  notes: 'For subdivisions creating 4 or fewer parcels/lots. Environmental review timeline varies by CEQA pathway chosen.'
+},
+
+'tentative-map-major': {
+  name: 'Major Subdivision (Tentative Map)',
+  steps: [
+    { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+    { name: 'Environmental Review', days: 180, note: 'ESTIMATED: Varies significantly by CEQA pathway. Minor projects may use Categorical Exemption (0 days) or ND/MND (142-205 days). Complex projects require EIR (837-972 days).', isHard: false, range: '0-972 days', code: 'Public Resources Code §21000 et seq.' },
+    { name: 'Tentative Map Review & Approval', days: 50, note: 'Agency must approve, conditionally approve, or deny', isHard: true, code: 'Gov. Code §66452.1' },
+    { name: 'Final Map Preparation', days: 365, note: 'ESTIMATED: Applicant prepares final map meeting conditions. Typically 6-18 months for major subdivisions.', isHard: false, range: '180-540 days' },
+    { name: 'Final Map Review & Recording', days: 50, note: 'Agency review and county recorder processing', isHard: true, code: 'Gov. Code §66458' }
+  ],
+  totalRange: '310-1,642 days (10-45 months)',
+  notes: 'For subdivisions creating 5 or more parcels/lots. Timeline highly dependent on CEQA pathway and project complexity. Range shown assumes simpler projects; complex EIR projects may take significantly longer.'
+},
+
+'parcel-map': {
+  name: 'Parcel Map',
+  steps: [
+    { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+    { name: 'Environmental Review', days: 0, note: 'Typically CEQA Exempt for minor subdivisions', isHard: true, code: 'Gov. Code §66428' },
+    { name: 'Parcel Map Review & Approval', days: 50, note: 'Ministerial approval if meets all requirements', isHard: true, code: 'Gov. Code §66456' },
+    { name: 'Recording', days: 30, note: 'County recorder processing', isHard: true, code: 'Gov. Code §66458' }
+  ],
+  totalRange: '110 days',
+  notes: 'Simplified process for 4 or fewer parcels in jurisdictions that allow parcel maps. All timelines are statutory requirements.'
+},
+
+'vesting-tentative-map': {
+  name: 'Vesting Tentative Map',
+  steps: [
+    { name: 'Application Completeness', days: 30, isHard: true, code: 'Gov. Code §65943' },
+    { name: 'Environmental Review', days: 180, note: 'ESTIMATED: Same as standard tentative map - varies by CEQA pathway', isHard: false, range: '0-972 days', code: 'Public Resources Code §21000 et seq.' },
+    { name: 'Vesting Tentative Map Review & Approval', days: 50, note: 'Agency must approve, conditionally approve, or deny. Creates vested right to develop.', isHard: true, code: 'Gov. Code §66498.1' },
+    { name: 'Final Map Preparation', days: 365, note: 'ESTIMATED: Same as standard tentative map', isHard: false, range: '180-540 days' },
+    { name: 'Final Map Review & Recording', days: 50, note: 'Agency review and county recorder processing', isHard: true, code: 'Gov. Code §66458' }
+  ],
+  totalRange: '310-1,642 days (10-45 months)',
+  notes: 'Provides vested rights protection against zoning changes. Same timeline as standard tentative map but with additional legal protections. Available for both minor and major subdivisions.'
+},
                 'ministerial-small': {
                     name: 'Building Permits (≤25 units)',
                     steps: [
@@ -297,6 +347,12 @@
                                             <option value="discretionary-eir">Environmental Impact Report</option>
                                             <option value="discretionary-eir-affordable">Affordable Housing (EIR)</option>
                                         </optgroup>
+                                        <optgroup label="Subdivision Map Act">
+                                              <option value="parcel-map">Parcel Map (≤4 parcels)</option>
+                                              <option value="tentative-map-minor">Minor Subdivision Tentative Map (≤4 lots)</option>
+                                              <option value="tentative-map-major">Major Subdivision Tentative Map (5+ lots)</option>
+                                              <option value="vesting-tentative-map">Vesting Tentative Map</option>
+                                            </optgroup>
                                         <optgroup label="AB 2234 Building Permits">
                                             <option value="ministerial-small">Building Permits (≤25 units)</option>
                                             <option value="ministerial-large">Building Permits (26+ units)</option>
